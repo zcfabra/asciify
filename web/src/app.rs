@@ -1,5 +1,6 @@
+use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
-use web_sys::{HtmlInputElement, Response};
+use web_sys::{HtmlInputElement};
 #[function_component(App)]
 pub fn app() -> Html {
 
@@ -15,10 +16,11 @@ pub fn app() -> Html {
                 web_sys::console::log_1(&"Hi".to_string().into());
                 let file = input.files().unwrap().item(0).unwrap();
                 web_sys::console::log_1(&file);
-                let contents = file.into();
-
-
-
+                let contents = file.array_buffer();
+                spawn_local(async {
+                    let conts = wasm_bindgen_futures::JsFuture::from(contents).await.unwrap();
+                    web_sys::console::log_1(&conts);
+                });
             }
         })
     };
