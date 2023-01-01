@@ -12,15 +12,42 @@ def main():
    file_name = args[1]
 
    img_data = cv2.imread(filename=file_name)
-   print(img_data)
-   print(img_data.shape)
    num_ranges = 5
-   interval = img_data.max() - img_data.min() / num_ranges
    bw = img_data.mean(axis=2)
-   print(bw.shape)
    bw[bw==255] = 0
-   bw = Image.fromarray(bw.astype(np.uint8))
+   bw =  bw.astype(np.uint8)
+   resized = cv2.resize(bw, (200,200))
+   interval =( resized.max() - resized.min()) / num_ranges
+   unique, counts = np.unique(resized, return_counts=True)
+#    for each, count in zip(unique, counts):
+#     print(each, count)
 
-   bw.save("hi.png")
+
+   scales = " .*%#"
+   out = ""
+
+   for i in range(200):
+    for j in range(200):
+        left_over = resized[i][j]
+        which_interval = 0
+        while left_over - interval >0:
+            left_over -=interval
+            which_interval+=1
+        # print(which_interval)
+        out+=scales[which_interval]
+    out+='\n'
+
+    # print(out)
+    with open("samps/out.txt", "w") as f:
+        f.write(out)
+
+
+        
+
+
+
+
+#    bw.save("samps/hi.png")
+
 if __name__ == "__main__":
     main()
