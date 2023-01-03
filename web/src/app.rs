@@ -13,24 +13,25 @@ pub fn app() -> Html {
 
 
     let counter= use_state(|| 0);
+    let print = use_state(|| "".to_string());
     let input_ref = use_node_ref(); 
     let img_ref = use_node_ref();
-    async fn get_image_array_buffer(to_resolve: js_sys::Promise)-> JsValue {
-        return wasm_bindgen_futures::JsFuture::from(to_resolve).await.unwrap();
-    }
+
     let onchange =  {
         let input_ref = input_ref.clone();
-        let img_ref = img_ref.clone();
+        // let img_ref = img_ref.clone();
         let counter = counter.clone();
+        let print = print.clone();
         Callback::from(  move |_| {
             let input = input_ref.cast::<HtmlInputElement>();
      
-            let imgRef = img_ref.cast::<HtmlCanvasElement>();
+            // let imgRef = img_ref.cast::<HtmlCanvasElement>();
             if let Some(input) = input {
                 // web_sys::console::log_1(&"Hi".to_string().into());
                 let file = input.files().unwrap().item(0).unwrap();
                 counter.set(1);
-                let image = imgRef.unwrap();
+                // let image = imgRef.unwrap();
+                let print = print.clone();
                 // web_sys::console::log_1(&file);
                 spawn_local( async move{
                     let contents = wasm_bindgen_futures::JsFuture::from(file.array_buffer()).await.unwrap();
@@ -44,17 +45,21 @@ pub fn app() -> Html {
                     
                     let img_reformat = img;
                     
-                    let img_resized = resize(&img_reformat, 300, 300, image::imageops::FilterType::Gaussian);
+                    let img_resized = resize(&img_reformat, 200, 200, image::imageops::FilterType::Gaussian);
                     let num_ranges = 5;
                     let interval = 255 /num_ranges;
 
                     let mut out_string = String::new();
-                    let chars_to_use = " .*%#";
+                    let chars_to_use = [" ", ".", "*", "%", "#"];
+                    web_sys::console::log_3(&"W, H: ".into(), &img_resized.width().into(), &img_resized.height().into());
                     for i in 0..img_resized.height(){
                         for j in 0..img_resized.width(){
-                            let pix:&[u8] = &img_resized.get_pixel(i, j).0[0..3];
+                            let pix:&[u8] = &img_resized.get_pixel(j,i).0[0..3];
                             // console::log_1(&"GOT HERE".into());
-                            let val:u32 = pix.iter().map(|x| *x as u32).sum::<u32>() / 3;
+                            let mut val:u32 = pix.iter().map(|x| *x as u32).sum::<u32>() / 3;
+                            if val == 255{
+                                val = 0;
+                            }
                             // console::log_1(&val.into());
                             let mut which_interval = 0;
                             let mut left_over:i32 = val.try_into().unwrap();
@@ -64,7 +69,7 @@ pub fn app() -> Html {
                                 *&mut left_over = *&left_over - *&interval;
                                 *&mut which_interval +=1;
                             };
-                            out_string.push(chars_to_use.chars().nth(which_interval).unwrap());
+                            out_string +=chars_to_use[which_interval];
 
                         };
                         out_string.push('\n');
@@ -73,26 +78,26 @@ pub fn app() -> Html {
                     web_sys::console::log_1(&"Rgb conversion, and resize".to_string().into());
                     
 
-                    let ctx = image.get_context("2d").unwrap().unwrap().dyn_into::<CanvasRenderingContext2d>().unwrap();
-                    let clamped = Clamped(img_resized.as_raw().as_slice());
-                    let img_data = ImageData::new_with_u8_clamped_array(clamped, img_resized.width()).unwrap();
+                    // let ctx = image.get_context("2d").unwrap().unwrap().dyn_into::<CanvasRenderingContext2d>().unwrap();
+                    // let clamped = Clamped(img_resized.as_raw().as_slice());
+                    // let img_data = ImageData::new_with_u8_clamped_array(clamped, img_resized.width()).unwrap();
 
                     web_sys::console::log_1(&"Imagedata creation".to_string().into());
                     // ctx.put_image_data(&img_data, 0.0, 0.0);
-                    ctx.set_fill_style(&"#ffffff".into());
-                    ctx.set_font("8px serif");
-                    web_sys::console::log_1(&out_string.clone().into());
-                    let out = ctx.fill_text(&out_string, 10.0, 10.0 );
-                    match out {
-                        Ok(())=>{
-                            web_sys::console::log_1(&"worked".into());
-                        },
-                        Err(err)=>{
-                            web_sys::console::log_1(&err);
-                        }
-                    }
+                    // ctx.set_fill_style(&"#22c55e".into());
+                    // ctx.set_font("8px sans-serif");
+                    // let splits = out_string.lines();
+                    // println!("{:?}", splits);
+                    // web_sys::console::log_1(&out_string.clone().into());
 
-                    web_sys::console::log_1(&"Draw ".to_string().into());
+                    // for (ix, line) in splits.enumerate(){
+                    //     web_sys::console::log_1(&line.into());
+                    //     let out = ctx.fill_text(&line, 600.0, (ix+1) as f64 * 10.0 );
+                    // }
+                    
+                    let print = print.clone();
+                    print.set(out_string.to_string()); 
+
 
 
                 });
@@ -107,14 +112,18 @@ pub fn app() -> Html {
         })
     };
     html! {
-        <main class="w-full h-screen bg-black text-green-500 flex flex-col items-center">
+        <main class="w-full h-screen fixed bg-black text-green-500 flex flex-col items-center">
+        <div class="w-full h-full overflow-auto flex flex-col items-center">
             <h1>{ "a s c i i f y" }</h1>
 
             if *counter == 0{<div class="w-10/12 lg:w-5/12 h-4/6 rounded-xl border border-green-500">
                 <input ref={input_ref} type="file" onchange={onchange}/> 
             </div>}
-            <canvas width={300} height={300} ref={img_ref}></canvas>
+
+            <pre class="text-[10px] leading-[5px] tracking-normal text-green-500">{&print[..]}</pre>
+            // <canvas width={1600} height={1000} ref={img_ref}></canvas>
             
+        </div>
         </main>
     }
 }
