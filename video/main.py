@@ -4,23 +4,28 @@ import cv2
 import sys
 import numpy as np
 from tqdm import tqdm
+import imgkit
 def main():
     args = sys.argv
-    vals = ".*%#."
+    vals = " .*%# "
     num_intervals = len(vals)
     interval = 255 /num_intervals 
     scale_down = 2
 
-
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     cap = cv2.VideoCapture(args[1])
-    while (pbar:= tqdm(cap.isOpened())):
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    print(f"FPS: {fps}")
+    frames = []
+    while (cap.isOpened()):
         ret, frame = cap.read()
         if ret == True:
             
             bw_frame = np.mean(frame, axis=2)
-            print(bw_frame.shape[0], bw_frame.shape[1])
-            # bw_frame_resized = cv2.resize(bw_frame, (bw_frame.shape[0] // scale_down, bw_frame.shape[1] // scale_down))
-            bw_frame_resized = bw_frame
+            # print("Shape", bw_frame.shape[0], bw_frame.shape[1])
+            bw_frame_resized = cv2.resize(bw_frame, (400,200))
+            # print("Resized", bw_frame_resized.shape)
+            # bw_frame_resized = bw_frame
             bw_frame_resized[bw_frame_resized == 255] = 0
             out = ""
             for i in range(bw_frame_resized.shape[0]):
@@ -30,37 +35,30 @@ def main():
                     while left_over - interval > 0:
                         left_over -= interval
                         which_char +=1
-                    out+=vals[which_char]
+                    out+=f"<span >{vals[which_char]}</span>"
                 out+='\n'
 
-            font = cv2.FONT_HERSHEY_SIMPLEX
+            out_html = f"<html><body style=\"background-color: #000000\"><pre style=\"display: inline-block; border-width: 4px 6px; border-color: black; color: #00ff00; font-size: 10px; line-height:10px\">{out}</pre></body></html>"
+            imgkit.from_string(out_html,"out.jpg" )
 
-            image = np.zeros((bw_frame_resized.shape[1]*10,bw_frame_resized.shape[0]*10))
-            # org
-            
-            # fontScale
-            fontScale = 0.5
-            
-            # Blue color in BGR
-            color = (255, 255, 255)
-            
-            # Line thickness of 2 px
-            thickness = 0
-            
-            # Using cv2.putText() method
-            for ix, line in enumerate(lines:= out.split("\n")):
-                x = 10
-                y= (ix+1) * 10
-                image = cv2.putText(image, line, (x,y), font, 
-                    fontScale, color, thickness, cv2.LINE_AA)
-            img = cv2.imwrite("out.png", image)
-            break
+            frames.append(cv2.imread("out.jpg"))
+
+
+
+
+
             
 
 
         else:
             break
+    vid = cv2.VideoWriter("output.mp4", fourcc, fps, (frames[0].shape[0], frames[0].shape[1]), True)
+    for frame in frames:
+        vid.write(frame)
+
     cap.release()
+    vid.release()
+
 
 
 if __name__ == "__main__":
