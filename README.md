@@ -1,2 +1,2 @@
 # asciify
-Browser based video-to-ascii editor in Rust
+img-to-ascii editor in Rust and Python
